@@ -1,0 +1,21 @@
+Traffic Density Control System
+
+Components Used:
+
+1 x Arduino Uno
+2 x HC-SR04 Ultrasonic Sensors
+
+Traffic Lights:
+2 x Red LEDs
+2 x Yellow LEDs
+2 x Green LEDs
+
+6 x 0.33kΩ Resistors
+
+1 x Breadboard
+
+Jumper Wires
+
+Software:
+Arduino IDE
+Tinkercad Simulation
