@@ -27,6 +27,20 @@ void setup() {
   pinMode(yellow2, OUTPUT);
   pinMode(green2, OUTPUT);
 
+  // Configure ultrasonic sensor pins explicitly.
+  pinMode(trig1, OUTPUT);
+  pinMode(echo1, INPUT);
+  pinMode(trig2, OUTPUT);
+  pinMode(echo2, INPUT);
+
+  // Start from a safe all-red state.
+  digitalWrite(red1, HIGH);
+  digitalWrite(red2, HIGH);
+  digitalWrite(yellow1, LOW);
+  digitalWrite(yellow2, LOW);
+  digitalWrite(green1, LOW);
+  digitalWrite(green2, LOW);
+
   Serial.begin(9600);
 }
 
@@ -40,11 +54,27 @@ void loop() {
   Serial.print(" cm | Road2: "); Serial.println(distance2);
 
   // -------- PRIORITY LOGIC --------
-  if (distance1 < distance2) {
-    // Road 1 has more traffic (object closer)
+  // A negative distance means that sensor timed out or returned no echo.
+  if (distance1 < 0 && distance2 < 0) {
+    // Do not grant green when neither lane has a trustworthy reading.
+    digitalWrite(red1, HIGH);
+    digitalWrite(red2, HIGH);
+    digitalWrite(yellow1, LOW);
+    digitalWrite(yellow2, LOW);
+    digitalWrite(green1, LOW);
+    digitalWrite(green2, LOW);
+    Serial.println("Sensor timeout on both roads; keeping both roads RED.");
+    delay(250);
+    return;
+  }
+
+  if (distance1 < 0) {
+    controlTraffic(2); // Only Road 2 has a valid reading.
+  } else if (distance2 < 0) {
+    controlTraffic(1); // Only Road 1 has a valid reading.
+  } else if (distance1 < distance2) {
     controlTraffic(1);
   } else {
-    // Road 2 has more traffic
     controlTraffic(2);
   }
 
@@ -100,9 +130,13 @@ int calculateDistance(int trig, int echo) {
   delayMicroseconds(10);
   digitalWrite(trig, LOW);
 
-  long duration = pulseIn(echo, HIGH);
+  // Bound the echo wait so a disconnected sensor cannot block the controller.
+  unsigned long duration = pulseIn(echo, HIGH, 30000UL);
 
-  int distance = duration * 0.034 / 2;
+  if (duration == 0) {
+    return -1; // No echo received within the timeout.
+  }
 
+  int distance = static_cast<int>(duration * 0.034 / 2.0);
   return distance;  // in cm
 }
